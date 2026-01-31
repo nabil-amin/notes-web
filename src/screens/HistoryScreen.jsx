@@ -2,8 +2,14 @@ import React, { useContext, useState, useCallback } from "react";
 import { RecordingsContext } from "../context/RecordingsContext";
 import { AuthContext } from "../context/AuthContext";
 
+import { downloadDocx } from "../downloadDocx";
+
 export default function HistoryScreen() {
-  const { recordings = [], refreshRecordings, loading } = useContext(RecordingsContext);
+  const {
+    recordings = [],
+    refreshRecordings,
+    loading,
+  } = useContext(RecordingsContext);
   const { user, logout } = useContext(AuthContext);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedRecording, setSelectedRecording] = useState(null);
@@ -56,7 +62,9 @@ export default function HistoryScreen() {
                 onClick={() => setSelectedRecording(rec)}
                 style={{
                   ...styles.recordingItem,
-                  ...(selectedRecording?.id === rec.id ? styles.recordingItemActive : {}),
+                  ...(selectedRecording?.id === rec.id
+                    ? styles.recordingItemActive
+                    : {}),
                 }}
               >
                 <div style={styles.recordingInfo}>
@@ -112,13 +120,49 @@ export default function HistoryScreen() {
               </div>
             )}
 
+            {(selectedRecording.transcript || selectedRecording.summary) && (
+              <div style={{ marginBottom: 30 }}>
+                <button
+                  style={{ marginTop: 10, marginRight: 10 }}
+                  onClick={() => {
+                    let lang = "en";
+                    if (
+                      (selectedRecording.transcript &&
+                        /[\u0600-\u06FF]/.test(selectedRecording.transcript)) ||
+                      (selectedRecording.summary &&
+                        /[\u0600-\u06FF]/.test(selectedRecording.summary))
+                    ) {
+                      lang = "ar";
+                    }
+                    let content = "";
+                    if (selectedRecording.transcript) {
+                      content += `Transcript:\n${selectedRecording.transcript}\n\n`;
+                    }
+                    if (selectedRecording.summary) {
+                      content += `Summary:\n${selectedRecording.summary}`;
+                    }
+                    downloadDocx({
+                      title:
+                        selectedRecording.name ||
+                        `Recording ${selectedRecording.id}`,
+                      content,
+                      lang,
+                      filename: `${selectedRecording.name || `recording_${selectedRecording.id}`}_transcript_summary.docx`,
+                    });
+                  }}
+                >
+                  Download Transcript & Summary
+                </button>
+              </div>
+            )}
             {selectedRecording.transcript && (
               <div style={styles.section}>
                 <h3 style={styles.sectionTitle}>Transcript</h3>
-                <p style={styles.sectionContent}>{selectedRecording.transcript}</p>
+                <p style={styles.sectionContent}>
+                  {selectedRecording.transcript}
+                </p>
               </div>
             )}
-
             {selectedRecording.summary && (
               <div style={styles.section}>
                 <h3 style={styles.sectionTitle}>Summary</h3>
@@ -164,7 +208,8 @@ const styles = {
     width: "100%",
     height: "100%",
     backgroundColor: "#f5f5f5",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontFamily:
+      "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     margin: 0,
     padding: 0,
     overflow: "hidden",
